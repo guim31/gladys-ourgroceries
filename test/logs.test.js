@@ -12,7 +12,7 @@ import { CONFIG, createWorld } from './helpers/world.js';
 const MINUTE = 60 * 1000;
 
 async function settle() {
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 400; i += 1) {
     await new Promise((resolve) => setImmediate(resolve));
   }
 }

@@ -12,9 +12,9 @@ import { CONFIG, createWorld, deviceOf, stateOf } from './helpers/world.js';
 
 const MINUTE = 60 * 1000;
 
-/** Let the promise chains of a fired timer run to their end. */
+/** Let the promise chains of a fired timer run to their end (a renewed session adds round trips). */
 async function settle() {
-  for (let i = 0; i < 30; i += 1) {
+  for (let i = 0; i < 400; i += 1) {
     await new Promise((resolve) => setImmediate(resolve));
   }
 }
@@ -243,4 +243,16 @@ test('after a reconnection to Gladys, the status and the Discovery tab are sent 
     gladys.fake.requests.filter((r) => r.path === '/discovered_device').length,
     discoveries + 1,
   );
+});
+
+test('a session ended on the site (HTTP 400, as the real site answers) is renewed silently', async (t) => {
+  const clock = useClock(t);
+  const { gladys, site, app } = await createWorld({ addedLists: [LIST_COURSES], timers: true });
+  site.expireSessions();
+  site.addFromApp(LIST_COURSES, 'Beurre');
+  await clock.advance(5 * MINUTE);
+  assert.equal(site.signIns, 2);
+  assert.equal(gladys.fake.connectionStatus.connected, true);
+  assert.equal(stateOf(gladys, LIST_COURSES, 'remaining'), 5);
+  app.stop();
 });

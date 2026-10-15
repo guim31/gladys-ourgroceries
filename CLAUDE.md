@@ -221,12 +221,18 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   (`listId`, `value`, sans `categoryId` : catégorie automatique), `setItemCrossedOff` (`listId`,
   `itemId`, `crossedOff`), `edit` (`listId`, `edits: [{ editType: 'delete', itemId }]`, la voie
   qu'utilise Home Assistant pour supprimer) ;
-- session finie : redirection, 401/403 ou page HTML à la place du JSON → une reconnexion, une seule.
+- session finie : **HTTP 400** (ce que répond le vrai site à une commande sans session valide, relevé
+  par `scripts/probe.mjs` le 15/10/2026), redirection, 401/403 ou page HTML à la place du JSON → une
+  reconnexion, un seul nouvel essai. Un 400 qui revient après la reconnexion est une vraie erreur
+  (`protocol`, « refused (HTTP 400) even with a new session »), sans boucle.
 
 **Pièges et choix.**
 
 - Le proxy des sessions de code refuse `www.ourgroceries.com` (CONNECT 403) : rien n'a été testé
   contre le vrai service. `scripts/probe.mjs` est à lancer depuis une machine qui a le réseau.
+- **Piège du 400** : le site ne redirige pas une commande hors session vers `/sign-in`, il répond
+  400 sans corps utile. Un client qui n'attend qu'une redirection ou un 401/403 ne se reconnecte
+  jamais. Le faux site des tests répond 400 par défaut (`endedSessionStatus`).
 - `fetch` doit être appelé avec `redirect: 'manual'` : le cookie de session arrive sur la réponse 302
   de la connexion, et une commande redirigée vers `/sign-in` signale une session finie.
 - `versionId` de l'aperçu : un seul appel par période suffit, une liste n'est relue que si sa

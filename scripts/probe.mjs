@@ -77,7 +77,7 @@ async function probeRefusal() {
   }
   printSteps();
 
-  console.log('Probe 2: a command without a session (a redirect or a 401/403 is expected)');
+  console.log('Probe 2: a command without a session (HTTP 400 is expected, as the site answered)');
   try {
     const response = await tracingFetch(`${BASE_URL}/your-lists/`, {
       method: 'POST',
@@ -86,9 +86,21 @@ async function probeRefusal() {
       body: JSON.stringify({ command: 'getOverview' }),
     });
     await response.arrayBuffer().catch(() => {});
-    const refused =
-      (response.status >= 300 && response.status < 400) || [401, 403].includes(response.status);
-    console.log(`   ${refused ? 'OK' : 'TO CHECK'}: HTTP ${response.status}`);
+    // 400 is what the real site answered (probe of 2026-10-15). A redirect or a
+    // 401/403 would also make the client sign in again: fine, but worth noting.
+    if (response.status === 400) {
+      console.log('   OK: HTTP 400, the client treats it as an ended session');
+    } else if (
+      (response.status >= 300 && response.status < 400) ||
+      [401, 403].includes(response.status)
+    ) {
+      console.log(
+        `   OK (changed): HTTP ${response.status}, still an ended session for the client`,
+      );
+    } else {
+      console.log(`   UNEXPECTED: HTTP ${response.status}, the client would not sign in again`);
+      ok = false;
+    }
   } catch (err) {
     console.log(`   UNREACHABLE: ${err.cause?.code ?? err.message}`);
     ok = false;

@@ -39,6 +39,8 @@ export function createFakeOurGroceries() {
     lists,
     /** Every request: `{ method, path, command? }`. */
     requests: [],
+    /** What a command without a valid session gets: 400, like the real site (probe.mjs). */
+    endedSessionStatus: 400,
     /** 'network' (fetch throws), a status code (answered), or null. */
     failure: null,
     signIns: 0,
@@ -96,7 +98,9 @@ export function createFakeOurGroceries() {
 
       if (pathname === '/your-lists/' && method === 'POST') {
         if (!signedIn) {
-          return redirect('/sign-in');
+          return fake.endedSessionStatus === 302
+            ? redirect('/sign-in')
+            : new Response('', { status: fake.endedSessionStatus });
         }
         const body = JSON.parse(init.body);
         record.command = body.command;

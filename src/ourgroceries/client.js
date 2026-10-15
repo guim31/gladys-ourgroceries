@@ -10,9 +10,11 @@
 //   3. Every command: a JSON POST to /your-lists/ with the cookie,
 //      `{ command, teamId, ...payload }`, answered in JSON.
 // The cookie and the team id are kept in the session store (/data), so a
-// restart does not sign in again. A command answered by a redirect, a 401/403
-// or an HTML page means the session ended: the client signs in once more and
-// retries, once.
+// restart does not sign in again. A command answered by a 400, a redirect, a
+// 401/403 or an HTML page means the session ended: the client signs in once
+// more and retries, once. The real site answers 400 to a command without a
+// valid session (seen by scripts/probe.mjs); a 400 that survives a fresh
+// sign-in is a refused request, not a session problem.
 // -----------------------------------------------------------------------------
 
 import { OurGroceriesError } from './errors.js';
@@ -159,7 +161,14 @@ export function createClient({
         },
         body: JSON.stringify({ command, teamId, ...payload }),
       });
-      if (isRedirect(response.status) || response.status === 401 || response.status === 403) {
+      if (response.status === 400 && attempt > 0) {
+        await response.arrayBuffer().catch(() => {});
+        throw new OurGroceriesError(
+          'protocol',
+          `${command} refused (HTTP 400) even with a new session`,
+        );
+      }
+      if (endsSession(response.status)) {
         await response.arrayBuffer().catch(() => {});
         continue; // session ended: sign in again
       }
@@ -242,3 +251,6 @@ export function readCookie(headers, name) {
 
 const cookieHeader = (cookie) => `${COOKIE_NAME}=${cookie}`;
 const isRedirect = (status) => status >= 300 && status < 400;
+// What a command gets back once its session is no longer valid.
+const endsSession = (status) =>
+  status === 400 || isRedirect(status) || status === 401 || status === 403;

@@ -44,14 +44,38 @@ test('a stored session is used as is: no new sign-in after a restart', async () 
   assert.equal(site.signIns, 1);
 });
 
-test('an ended session is renewed once, and the command retried', async () => {
-  const site = createFakeOurGroceries();
-  const client = clientFor(site);
-  await client.getLists();
-  site.expireSessions();
-  const list = await client.getList(LIST_COURSES);
-  assert.equal(list.items.length, 5);
-  assert.equal(site.signIns, 2);
+for (const status of [400, 302, 401, 403]) {
+  test(`an ended session (HTTP ${status}) is renewed once, and the command retried`, async () => {
+    const site = createFakeOurGroceries();
+    site.endedSessionStatus = status;
+    const client = clientFor(site);
+    await client.getLists();
+    site.expireSessions();
+    const list = await client.getList(LIST_COURSES);
+    assert.equal(list.items.length, 5);
+    assert.equal(site.signIns, 2);
+  });
+}
+
+test('a 400 that survives a new sign-in is a clear error, without a loop', async () => {
+  // Every command refused, sign-ins still accepted.
+  const refusing = createFakeOurGroceries();
+  const passthrough = refusing.fetch;
+  let commands = 0;
+  refusing.fetch = async (url, init) => {
+    if (init?.method === 'POST' && new URL(url).pathname === '/your-lists/') {
+      commands += 1;
+      return new Response('', { status: 400 });
+    }
+    return passthrough(url, init);
+  };
+  await assert.rejects(clientFor(refusing).getLists(), (err) => {
+    assert.equal(err.code, 'protocol');
+    assert.match(err.message, /getOverview refused \(HTTP 400\) even with a new session/);
+    return true;
+  });
+  assert.equal(commands, 2, 'one try, one retry after a new sign-in');
+  assert.equal(refusing.signIns, 2);
 });
 
 test('refused credentials are an auth error, without the password in the message', async () => {
