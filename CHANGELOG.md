@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Added
 
 - Sign-in to an OurGroceries account with its email and password; the session
@@ -30,4 +32,5 @@ the notes of the version's GitHub Release.
 - Texts, feature names and documentation in English, French, German and
   Spanish (French by default).
 
-[Unreleased]: https://github.com/guim31/gladys-ourgroceries/commits/main
+[Unreleased]: https://github.com/guim31/gladys-ourgroceries/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-ourgroceries/releases/tag/v1.0.1
