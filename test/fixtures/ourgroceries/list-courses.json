@@ -1,0 +1,22 @@
+{
+  "command": "getList",
+  "list": {
+    "id": "Xk3pQ9rT2vLmN8wYz4aB1c",
+    "name": "Courses",
+    "listType": "SHOPPING",
+    "versionId": "7Hq2Lp9sKd3mWx",
+    "items": [
+      { "id": "it-0001", "name": "Lait (2)", "value": "Lait (2)", "categoryId": "cat-dairy" },
+      { "id": "it-0002", "name": "Pain", "value": "Pain", "categoryId": "cat-bakery" },
+      { "id": "it-0003", "name": "Œufs", "value": "Œufs" },
+      {
+        "id": "it-0004",
+        "name": "Café",
+        "value": "Café",
+        "categoryId": "cat-drinks",
+        "crossedOffAt": 1699107501
+      },
+      { "id": "it-0005", "name": "Pommes", "value": "Pommes", "categoryId": "cat-fruit" }
+    ]
+  }
+}

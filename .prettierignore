@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 /data/
 *.log
+# The page as the site serves it: the client reads it with a regex.
+test/fixtures/ourgroceries/*.html

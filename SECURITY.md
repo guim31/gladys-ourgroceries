@@ -30,6 +30,21 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **Secrets**: the OurGroceries email and password are stored by Gladys in
+  the integration configuration (the password is a `secret` field, never sent
+  back to the browser). The container reads them at startup and never writes
+  them anywhere.
+- **`/data`**: the only file is `session.json`, written `0600`: the
+  OurGroceries session cookie, the team identifier, and a hash of the email to
+  tell accounts apart. The cookie gives access to the shopping lists: treat a
+  copy of the volume as a credential.
+- **Logs**: neither the password, nor the email, nor the session cookie is
+  ever logged, at any level (checked by `test/logs.test.js`).
+- **Network**: outbound HTTPS to `www.ourgroceries.com` only. The container
+  listens on no port.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and the OurGroceries service.

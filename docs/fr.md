@@ -1,67 +1,171 @@
-# Template de démonstration
+# OurGroceries
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Vos listes de courses partagées [OurGroceries](https://www.ourgroceries.com)
+dans Gladys : les articles encore à acheter sur chaque liste, un widget de
+tableau de bord pour ajouter et cocher des articles, et des cartes de scène
+pour mettre « lait » sur la liste d’un appui sur un bouton.
 
-## Ce que vous obtenez
+Cette intégration n’est pas affiliée à OurGroceries. **Elle a été développée
+sans compte OurGroceries pour la tester : vos retours sont les bienvenus**,
+sur le forum de Gladys ou dans les issues GitHub.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce qu’elle fait
+
+- Un appareil Gladys par liste de courses choisie, avec le nombre d’articles
+  à acheter, le nombre d’articles cochés et la liste elle-même en texte.
+- Un widget **Liste de courses** pour le tableau de bord : les articles à
+  acheter, avec des boutons pour ajouter, cocher et vider.
+- Un déclencheur de scène, **Article ajouté à une liste de courses**, et
+  trois actions de scène : **Ajouter à une liste de courses**, **Cocher un
+  article** et **Vider les articles cochés**.
+- Les changements faits dans l’appli OurGroceries arrivent dans Gladys au
+  rafraîchissement suivant (toutes les 5 minutes par défaut).
+
+## Prérequis
+
+- Gladys 5.2.0 ou plus récent.
+- Un compte OurGroceries avec **e-mail et mot de passe**. Un compte ouvert
+  avec « Se connecter avec Google » ou « avec Apple » n’a pas de mot de
+  passe : définissez-en un d’abord sur le site d’OurGroceries.
+- Un accès à Internet depuis Gladys : l’intégration parle aux serveurs
+  d’OurGroceries.
 
 ## Configuration
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+1. Dans Gladys, ouvrez **Intégrations**, puis **Installer depuis GitHub**,
+   et installez `guim31/gladys-ourgroceries` (ou installez-la depuis le
+   store).
+2. Dans l’onglet **Configuration**, saisissez l’**e-mail** et le **mot de
+   passe** de votre compte OurGroceries, puis enregistrez.
+3. Si besoin, choisissez la fréquence de lecture des listes (**Rafraîchir
+   toutes les**, 5 minutes par défaut) et la **Langue des textes** (français
+   par défaut) : elle nomme les fonctionnalités à l’ajout d’une liste, et
+   rédige le texte de la liste et les messages.
+4. Appuyez sur **Tester la connexion et rafraîchir** : le message sous le
+   bouton indique combien de listes de courses compte le compte.
+5. Ouvrez l’onglet **Découverte** : chaque liste de courses du compte y
+   figure. Ajoutez celles que vous voulez dans Gladys. Les recettes ne sont
+   pas des listes de courses et sont écartées.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Appareils
 
-## Actions
+Chaque liste de courses ajoutée devient un appareil au nom de la liste,
+avec trois fonctionnalités en lecture seule :
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+| Fonctionnalité     | Ce qu’elle contient                                                                |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| Articles à acheter | Le nombre d’articles non cochés                                                    |
+| Articles cochés    | Le nombre d’articles cochés encore sur la liste                                    |
+| Liste              | Les noms des articles à acheter, séparés par des virgules (255 caractères au plus) |
 
-## Scènes
+Renommer une liste dans OurGroceries garde son appareil : Gladys connaît la
+liste par son identifiant OurGroceries, pas par son nom. Une liste créée
+plus tard dans l’appli apparaît dans l’onglet **Découverte** au
+rafraîchissement suivant.
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+## Widget de tableau de bord
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+Ajoutez le widget **Liste de courses** à un tableau de bord et choisissez la
+liste dans ses réglages. Il affiche le nom de la liste, le nombre d’articles
+à acheter (en direct), les 8 premiers articles et combien il en reste, et
+trois boutons :
 
-## Tableau de bord
+- **Ajouter** ouvre un champ pour saisir un article ;
+- **Cocher** ouvre la liste des articles à acheter : choisissez-en un ;
+- **Vider cochés** supprime les articles cochés, après confirmation.
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Les widgets de Gladys n’ont pas de case à cocher : on coche par la liste du
+bouton **Cocher**. Ajouter un article déjà sur la liste ne change rien ;
+ajouter un article coché le remet sur la liste, comme le fait l’appli.
+
+## Déclencheur de scène
+
+**Article ajouté à une liste de courses** lance une scène quand quelqu’un
+ajoute un article dans OurGroceries. Choisissez une liste, ou laissez vide
+pour toutes. La scène peut reprendre l’**Article** et le **Nom de la liste**
+dans ses messages.
+
+Le déclencheur part au rafraîchissement qui suit l’ajout (jusqu’à 5 minutes
+plus tard par défaut). Les articles ajoutés par Gladys elle-même (une scène,
+le widget) ne le déclenchent pas : une scène ne peut pas boucler sur
+elle-même. Un article coché puis remis compte comme ajouté.
+
+## Actions de scène
+
+- **Ajouter à une liste de courses** : met un article sur la liste choisie.
+  Déjà présent : rien ne change. Coché : il revient sur la liste. Renvoie
+  **Article ajouté** (non s’il y était déjà) et **Article tel que sur la
+  liste**.
+- **Cocher un article** : coche l’article de ce nom. La casse, les accents
+  et une quantité entre parenthèses ne comptent pas : « lait » coche
+  « Lait (2) ». Renvoie **Article trouvé et coché**.
+- **Vider les articles cochés** : supprime les articles cochés de la liste.
+  Renvoie **Articles supprimés**.
+
+Les champs de texte acceptent les informations de la scène, comme l’article
+du déclencheur.
+
+## Exemples de scènes
+
+- **Bouton « plus de lait »** : déclencheur « un bouton est appuyé » (un
+  bouton Zigbee sur le frigo), action **Ajouter à une liste de courses**
+  avec l’article « Lait ».
+- **Me dire ce qui a été ajouté** : déclencheur **Article ajouté à une liste
+  de courses**, action « envoyer un message » avec l’**Article** et le **Nom
+  de la liste**.
+- **Retour des courses** : déclencheur « l’utilisateur rentre à la maison »,
+  condition **Articles cochés** supérieur à 0, action **Vider les articles
+  cochés**.
+
+## Rafraîchissement et limites du service
+
+OurGroceries ne publie ni API ni quota. Comme l’intégration Home Assistant,
+cette intégration utilise les requêtes du site officiel, avec retenue :
+
+- une requête par rafraîchissement lit l’aperçu du compte ; les articles
+  d’une liste ne sont relus que si la liste a changé ;
+- seules les listes ajoutées à Gladys sont lues ;
+- la période est de 5 minutes par défaut (2 minutes au plus vite, 30 au
+  plus lent) ; le bouton de test, le widget et les actions de scène lisent
+  et écrivent tout de suite ;
+- après un refus des identifiants, plus aucune tentative tant que vous ne
+  changez pas la configuration ou n’appuyez pas sur **Tester la connexion et
+  rafraîchir** : réessayer un mauvais mot de passe peut bloquer un compte.
+
+Utilisez-la dans le respect des
+[conditions d’OurGroceries](https://www.ourgroceries.com/terms).
+
+## Données et vie privée
+
+Le mot de passe est conservé par Gladys, comme tout champ secret.
+L’intégration ne garde que le cookie de session d’OurGroceries et
+l’identifiant d’équipe dans son propre volume (`/data/session.json`), pour
+ne pas se reconnecter à chaque redémarrage. Ni le mot de passe, ni l’e-mail,
+ni le cookie n’apparaissent jamais dans les journaux.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **« OurGroceries a refusé l’e-mail ou le mot de passe »** : vérifiez-les
+  sur le site d’OurGroceries, puis enregistrez de nouveau la configuration.
+- **« OurGroceries est injoignable »** : l’intégration réessaie à chaque
+  rafraîchissement et signale dans les journaux le retour du service.
+- **Un changement fait dans l’appli n’est pas encore dans Gladys** :
+  attendez le rafraîchissement suivant, ou appuyez sur **Tester la connexion
+  et rafraîchir**.
+- **Les journaux de l’intégration** : ouvrez l’intégration dans Gladys, puis
+  ses journaux. Pour voir chaque requête, passez la variable `LOG_LEVEL` du
+  conteneur à `debug`.
+
+## Limites
+
+- Développée sans compte OurGroceries : les requêtes suivent la bibliothèque
+  Python `ourgroceries` utilisée par Home Assistant. Si OurGroceries change
+  son site, l’intégration peut cesser de fonctionner jusqu’à sa mise à jour.
+- Les changements arrivent dans Gladys au rafraîchissement suivant, pas
+  instantanément.
+- Les catégories, notes, quantités, recettes et la liste principale ne sont
+  pas gérées. Un article est ajouté sans catégorie : OurGroceries le range
+  comme dans l’appli.
+- Le bouton **Cocher** du widget propose les 50 premiers articles à acheter.
+- Les noms des fonctionnalités sont fixés dans la langue de la configuration
+  à l’ajout d’une liste ; changer de langue ensuite ne renomme rien.
