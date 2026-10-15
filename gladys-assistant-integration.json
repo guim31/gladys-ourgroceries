@@ -1,177 +1,425 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "OurGroceries",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your shared OurGroceries shopping lists in Gladys: items to buy, scenes and a widget.",
+    "fr": "Vos listes de courses partagées OurGroceries dans Gladys : articles, scènes et widget.",
+    "de": "Deine geteilten OurGroceries-Einkaufslisten in Gladys: Artikel, Szenen und ein Widget.",
+    "es": "Sus listas de la compra compartidas de OurGroceries en Gladys: artículos, escenas y widget."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-ourgroceries:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-ourgroceries/main/cover.png",
+  "categories": ["services"],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your OurGroceries account",
+        "fr": "Votre compte OurGroceries",
+        "de": "Dein OurGroceries-Konto",
+        "es": "Su cuenta de OurGroceries"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Enter the email and password you use to sign in to OurGroceries. Then open the Discover tab and add the shopping lists you want in Gladys. This integration is not affiliated with OurGroceries.",
+        "fr": "Saisissez l’e-mail et le mot de passe de votre compte OurGroceries. Ouvrez ensuite l’onglet Découverte et ajoutez les listes de courses voulues dans Gladys. Cette intégration n’est pas affiliée à OurGroceries.",
+        "de": "Gib die E-Mail-Adresse und das Passwort deines OurGroceries-Kontos ein. Öffne dann den Tab „Entdecken“ und füge die gewünschten Einkaufslisten zu Gladys hinzu. Diese Integration ist nicht mit OurGroceries verbunden.",
+        "es": "Introduzca el correo electrónico y la contraseña de su cuenta de OurGroceries. Después abra la pestaña Descubrir y añada a Gladys las listas de la compra que desee. Esta integración no está afiliada a OurGroceries."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://www.ourgroceries.com/sign-in",
+          "label": {
+            "en": "OurGroceries web site",
+            "fr": "Site web d’OurGroceries",
+            "de": "OurGroceries-Website",
+            "es": "Sitio web de OurGroceries"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "email",
+      "type": "string",
+      "label": {
+        "en": "Email",
+        "fr": "E-mail",
+        "de": "E-Mail-Adresse",
+        "es": "Correo electrónico"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "placeholder": {
+        "en": "name@example.com",
+        "fr": "nom@exemple.fr",
+        "de": "name@beispiel.de",
+        "es": "nombre@ejemplo.es"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Kept by Gladys. The container stores only the session cookie in its own volume.",
+        "fr": "Conservé par Gladys. Le conteneur ne garde que le cookie de session dans son volume.",
+        "de": "Wird von Gladys gespeichert. Der Container behält nur das Sitzungs-Cookie in seinem Volume.",
+        "es": "Lo guarda Gladys. El contenedor solo conserva la cookie de sesión en su volumen."
+      },
+      "required": true
     },
     {
-      "key": "unit",
+      "key": "refresh_minutes",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Refresh every",
+        "fr": "Rafraîchir toutes les",
+        "de": "Aktualisieren alle",
+        "es": "Actualizar cada"
+      },
+      "description": {
+        "en": "How often the lists are read. OurGroceries has no public API: stay gentle with it.",
+        "fr": "Fréquence de lecture des listes. OurGroceries n’a pas d’API publique : restez raisonnable.",
+        "de": "Wie oft die Listen gelesen werden. OurGroceries hat keine öffentliche API: Bleib maßvoll.",
+        "es": "Frecuencia de lectura de las listas. OurGroceries no tiene API pública: sea moderado."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "5",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "2",
+          "label": { "en": "2 minutes", "fr": "2 minutes", "de": "2 Minuten", "es": "2 minutos" }
+        },
+        {
+          "value": "5",
+          "label": { "en": "5 minutes", "fr": "5 minutes", "de": "5 Minuten", "es": "5 minutos" }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 minutes",
+            "fr": "10 minutes",
+            "de": "10 Minuten",
+            "es": "10 minutos"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "15 minutes",
+            "fr": "15 minutes",
+            "de": "15 Minuten",
+            "es": "15 minutos"
+          }
+        },
+        {
+          "value": "30",
+          "label": {
+            "en": "30 minutes",
+            "fr": "30 minutes",
+            "de": "30 Minuten",
+            "es": "30 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the texts",
+        "fr": "Langue des textes",
+        "de": "Sprache der Texte",
+        "es": "Idioma de los textos"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Feature names (set when a list is added), the list text and the messages.",
+        "fr": "Noms des fonctionnalités (fixés à l’ajout d’une liste), texte de la liste et messages.",
+        "de": "Namen der Funktionen (beim Hinzufügen festgelegt), Listentext und Meldungen.",
+        "es": "Nombres de las funciones (fijados al añadir una lista), texto de la lista y mensajes."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_and_refresh",
+      "label": {
+        "en": "Test the connection and refresh",
+        "fr": "Tester la connexion et rafraîchir",
+        "de": "Verbindung testen und aktualisieren",
+        "es": "Probar la conexión y actualizar"
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "item_added",
+      "label": {
+        "en": "Item added to a shopping list",
+        "fr": "Article ajouté à une liste de courses",
+        "de": "Artikel zu einer Einkaufsliste hinzugefügt",
+        "es": "Artículo añadido a una lista de la compra"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "Someone added an item in OurGroceries (seen at the next refresh). Items added by Gladys do not count.",
+        "fr": "Quelqu’un a ajouté un article dans OurGroceries (vu au rafraîchissement suivant). Ceux ajoutés par Gladys ne comptent pas.",
+        "de": "Jemand hat in OurGroceries einen Artikel hinzugefügt (bei der nächsten Aktualisierung erkannt). Von Gladys hinzugefügte zählen nicht.",
+        "es": "Alguien ha añadido un artículo en OurGroceries (visto en la siguiente actualización). Los añadidos por Gladys no cuentan."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "list",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "label": {
+            "en": "Shopping list",
+            "fr": "Liste de courses",
+            "de": "Einkaufsliste",
+            "es": "Lista de la compra"
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "item",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": { "en": "Item", "fr": "Article", "de": "Artikel", "es": "Artículo" }
+        },
+        {
+          "key": "list_name",
+          "type": "string",
+          "label": {
+            "en": "List name",
+            "fr": "Nom de la liste",
+            "de": "Name der Liste",
+            "es": "Nombre de la lista"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "add_item",
+      "label": {
+        "en": "Add to a shopping list",
+        "fr": "Ajouter à une liste de courses",
+        "de": "Zu einer Einkaufsliste hinzufügen",
+        "es": "Añadir a una lista de la compra"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Puts an item on the list. Already there: nothing changes. Crossed off: back on the list.",
+        "fr": "Met un article sur la liste. Déjà présent : rien ne change. Coché : il revient sur la liste.",
+        "de": "Setzt einen Artikel auf die Liste. Schon da: nichts ändert sich. Abgehakt: wieder auf der Liste.",
+        "es": "Pone un artículo en la lista. Si ya está, nada cambia. Si está tachado, vuelve a la lista."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
+          "key": "list",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Shopping list",
+            "fr": "Liste de courses",
+            "de": "Einkaufsliste",
+            "es": "Lista de la compra"
+          },
+          "required": true
+        },
+        {
+          "key": "item",
+          "type": "string",
+          "label": { "en": "Item", "fr": "Article", "de": "Artikel", "es": "Artículo" },
+          "placeholder": {
+            "en": "e.g. Milk",
+            "fr": "ex. Lait",
+            "de": "z. B. Milch",
+            "es": "p. ej. Leche"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "added",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Item added",
+            "fr": "Article ajouté",
+            "de": "Artikel hinzugefügt",
+            "es": "Artículo añadido"
+          }
+        },
+        {
+          "key": "item",
+          "type": "string",
+          "label": {
+            "en": "Item as on the list",
+            "fr": "Article tel que sur la liste",
+            "de": "Artikel wie auf der Liste",
+            "es": "Artículo tal como en la lista"
+          }
+        }
+      ]
+    },
+    {
+      "key": "cross_off_item",
+      "label": {
+        "en": "Cross off an item",
+        "fr": "Cocher un article",
+        "de": "Einen Artikel abhaken",
+        "es": "Tachar un artículo"
+      },
+      "description": {
+        "en": "Crosses off the item with this name. Case, accents and a quantity in parentheses do not count.",
+        "fr": "Coche l’article de ce nom. La casse, les accents et une quantité entre parenthèses ne comptent pas.",
+        "de": "Hakt den Artikel mit diesem Namen ab. Groß-/Kleinschreibung, Akzente und eine Menge in Klammern zählen nicht.",
+        "es": "Tacha el artículo con este nombre. Mayúsculas, acentos y una cantidad entre paréntesis no cuentan."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "list",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Shopping list",
+            "fr": "Liste de courses",
+            "de": "Einkaufsliste",
+            "es": "Lista de la compra"
+          },
+          "required": true
+        },
+        {
+          "key": "item",
+          "type": "string",
+          "label": { "en": "Item", "fr": "Article", "de": "Artikel", "es": "Artículo" },
+          "placeholder": {
+            "en": "e.g. Milk",
+            "fr": "ex. Lait",
+            "de": "z. B. Milch",
+            "es": "p. ej. Leche"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "label": {
+            "en": "Item found and crossed off",
+            "fr": "Article trouvé et coché",
+            "de": "Artikel gefunden und abgehakt",
+            "es": "Artículo encontrado y tachado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "clear_crossed_off",
+      "label": {
+        "en": "Clear the crossed-off items",
+        "fr": "Vider les articles cochés",
+        "de": "Abgehakte Artikel löschen",
+        "es": "Quitar los artículos tachados"
+      },
+      "description": {
+        "en": "Deletes every crossed-off item of the list, as the Delete crossed-off items menu of the app does.",
+        "fr": "Supprime tous les articles cochés de la liste, comme le menu de l’appli qui supprime les cochés.",
+        "de": "Löscht alle abgehakten Artikel der Liste, wie das entsprechende Menü der App.",
+        "es": "Elimina todos los artículos tachados de la lista, como el menú correspondiente de la aplicación."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "list",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Shopping list",
+            "fr": "Liste de courses",
+            "de": "Einkaufsliste",
+            "es": "Lista de la compra"
+          },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "number",
+          "label": {
+            "en": "Items deleted",
+            "fr": "Articles supprimés",
+            "de": "Gelöschte Artikel",
+            "es": "Artículos eliminados"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "shopping_list",
+      "label": {
+        "en": "Shopping list",
+        "fr": "Liste de courses",
+        "de": "Einkaufsliste",
+        "es": "Lista de la compra"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "The items to buy, with buttons to add, cross off and clear.",
+        "fr": "Les articles à acheter, avec des boutons pour ajouter, cocher et vider.",
+        "de": "Die zu kaufenden Artikel, mit Knöpfen zum Hinzufügen, Abhaken und Leeren.",
+        "es": "Los artículos por comprar, con botones para añadir, tachar y vaciar."
+      },
+      "icon": "shopping-cart",
+      "settings": [
+        {
+          "key": "list",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Shopping list",
+            "fr": "Liste de courses",
+            "de": "Einkaufsliste",
+            "es": "Lista de la compra"
+          },
+          "required": true
+        }
+      ],
+      "action_timeout_seconds": 30
     }
   ]
 }

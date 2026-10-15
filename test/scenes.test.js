@@ -1,93 +1,118 @@
+// -----------------------------------------------------------------------------
+// Scene actions, run as the core runs them (fake.sceneAction with the
+// resolved fields): the list is the device external_id the editor offered.
+// -----------------------------------------------------------------------------
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { createFakeGladys } from '@gladysassistant/integration-sdk/testing';
-import { DEVICE_BLUEPRINTS } from '../src/devices/index.js';
-import { MOTION_DETECTED_TRIGGER, motionSensor } from '../src/devices/motionSensor.js';
-import { SCENE_ACTIONS } from '../src/scenes.js';
-import { normalizeConfig } from '../src/config.js';
+import { LIST_BRICOLAGE, LIST_COURSES } from './helpers/fakeOurGroceries.js';
+import { createWorld, stateOf } from './helpers/world.js';
 
-const manifest = JSON.parse(
-  await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
-);
-const config = normalizeConfig();
+const listDevice = (gladys, listId) => gladys.externalIds('list', listId).device;
 
-const declarationOf = (list, key) => manifest[list].find((entry) => entry.key === key);
-const keysOf = (list) => (list ?? []).map((entry) => entry.key);
-const deviceIdOf = (gladys, key) =>
-  DEVICE_BLUEPRINTS.find((bp) => bp.key === key).deviceExternalId(gladys);
-
-// Let the async interval callback run to completion.
-const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-test('the motion sensor fires one motion_detected event per detection, none on the clear', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'one detection, one event');
-    assert.equal(gladys.fake.sceneEvents[0].key, MOTION_DETECTED_TRIGGER);
-    assert.equal(gladys.fake.states.at(-1).state, 1, 'the state is still published');
-
-    t.mock.timers.tick(10_000);
-    await flush();
-    assert.equal(gladys.fake.states.at(-1).state, 0, 'the detection is cleared');
-    assert.equal(gladys.fake.sceneEvents.length, 1, 'the clear fires no event');
-  } finally {
-    stopPush();
-  }
+test('add_item puts the item on the list, and the device follows at once', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('add_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: ' Lait d’avoine ',
+  });
+  assert.deepEqual(ack, {
+    success: true,
+    data: { outputs: { added: true, item: 'Lait d’avoine' } },
+  });
+  assert.ok(site.items(LIST_COURSES).some((item) => item.name === 'Lait d’avoine'));
+  assert.equal(stateOf(gladys, LIST_COURSES, 'remaining'), 5);
+  assert.ok(gladys.fake.widgetRefreshes.includes('shopping_list'));
 });
 
-test('motion_detected data only carries keys the trigger declares', async (t) => {
-  t.mock.timers.enable({ apis: ['setInterval', 'setTimeout'] });
-  const gladys = createFakeGladys();
-  const stopPush = motionSensor.startPush(gladys, config);
-  try {
-    t.mock.timers.tick(60_000);
-    await flush();
-  } finally {
-    stopPush();
-  }
-  const [{ data }] = gladys.fake.sceneEvents;
-  const trigger = declarationOf('scene_triggers', MOTION_DETECTED_TRIGGER);
-  // The core keeps the `fields` keys (filters) and the `variables` keys
-  // (exposed to the scene): any other key would be silently dropped.
-  const declared = [...keysOf(trigger.fields), ...keysOf(trigger.variables)];
-  for (const [key, value] of Object.entries(data)) {
-    assert.ok(declared.includes(key), `data.${key} is not declared, the core would drop it`);
-    assert.ok(value === null || typeof value !== 'object', `data.${key} must be a primitive`);
-  }
-  // A `"source": "devices"` filter stores a device external_id.
-  assert.equal(data.device, deviceIdOf(gladys, 'motion-sensor'));
-  const targets = trigger.fields.find((field) => field.key === 'target').options;
-  assert.ok(
-    targets.some((option) => option.value === data.target),
-    `data.target "${data.target}" must be one of the filter options`,
+test('add_item twice ("out of milk" pressed twice): no duplicate', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('add_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: 'LAIT',
+  });
+  assert.deepEqual(ack.data.outputs, { added: false, item: 'Lait (2)' });
+  assert.deepEqual(site.commands().slice(-1), ['getList'], 'no write');
+});
+
+test('add_item brings a crossed-off item back instead of a duplicate', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('add_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: 'cafe',
+  });
+  assert.deepEqual(ack.data.outputs, { added: true, item: 'Café' });
+  const cafes = site.items(LIST_COURSES).filter((item) => item.name === 'Café');
+  assert.equal(cafes.length, 1);
+  assert.equal(cafes[0].crossedOffAt, undefined);
+});
+
+test('add_item refuses a device that is not one of the lists', async () => {
+  const { gladys } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('add_item', { list: 'ext:other:list:x', item: 'Sel' });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /Liste de courses inconnue/);
+});
+
+test('add_item refuses an empty name', async () => {
+  const { gladys } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('add_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: '   ',
+  });
+  assert.equal(ack.success, false);
+  assert.match(ack.error, /vide/);
+});
+
+test('cross_off_item finds the item by name, whatever the case and accents', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES] });
+  const ack = await gladys.fake.sceneAction('cross_off_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: 'oeufs',
+  });
+  assert.deepEqual(ack.data.outputs, { found: true });
+  assert.ok(site.items(LIST_COURSES).find((item) => item.id === 'it-0003').crossedOffAt);
+  assert.equal(stateOf(gladys, LIST_COURSES, 'remaining'), 3);
+  assert.equal(stateOf(gladys, LIST_COURSES, 'crossed_off'), 2);
+
+  const missing = await gladys.fake.sceneAction('cross_off_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: 'Chocolat',
+  });
+  assert.deepEqual(missing, { success: true, data: { outputs: { found: false } } });
+});
+
+test('clear_crossed_off deletes the crossed-off items and says how many', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES, LIST_BRICOLAGE] });
+  const ack = await gladys.fake.sceneAction('clear_crossed_off', {
+    list: listDevice(gladys, LIST_COURSES),
+  });
+  assert.deepEqual(ack.data.outputs, { deleted: 1 });
+  assert.equal(
+    site.items(LIST_COURSES).some((item) => item.name === 'Café'),
+    false,
+  );
+  assert.equal(stateOf(gladys, LIST_COURSES, 'crossed_off'), 0);
+
+  const none = await gladys.fake.sceneAction('clear_crossed_off', {
+    list: listDevice(gladys, LIST_BRICOLAGE),
+  });
+  assert.deepEqual(none.data.outputs, { deleted: 0 });
+  assert.equal(site.commands().includes('edit'), true);
+  assert.equal(
+    site.commands().filter((c) => c === 'edit').length,
+    1,
+    'nothing to delete: no write',
   );
 });
 
-test('identify_device signals the chosen device and returns the declared outputs', async () => {
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'light') },
-    config,
+test('a list deleted in OurGroceries is an error the scene logs', async () => {
+  const { gladys, site } = await createWorld({ addedLists: [LIST_COURSES] });
+  site.lists.delete(LIST_COURSES);
+  await gladys.fake.scanRequest();
+  const ack = await gladys.fake.sceneAction('add_item', {
+    list: listDevice(gladys, LIST_COURSES),
+    item: 'Sel',
   });
-  assert.deepEqual(outputs, { signalled: true });
-  const declared = keysOf(declarationOf('scene_actions', 'identify_device').outputs);
-  for (const key of Object.keys(outputs)) {
-    assert.ok(declared.includes(key), `output "${key}" is not declared, the core would drop it`);
-  }
-});
-
-test('identify_device reports a device that cannot signal itself through its output', async () => {
-  // Not a failure: a scene action is never a condition, the scene author
-  // gates the following actions on the output instead.
-  const gladys = createFakeGladys();
-  const outputs = await SCENE_ACTIONS.identify_device(gladys, {
-    fields: { device: deviceIdOf(gladys, 'weather-station') },
-    config,
-  });
-  assert.deepEqual(outputs, { signalled: false });
+  assert.equal(ack.success, false);
 });

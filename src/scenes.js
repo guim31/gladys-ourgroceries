@@ -1,41 +1,49 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene actions (manifest `scene_actions`, Gladys 5.1+).
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
-//
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// The `list` field is a device of the integration (`source: "devices"`): the
+// scene editor only offers the lists the user added to Gladys. Each handler
+// receives the fields resolved by the core and returns the declared outputs.
+// A scene action is not a condition: an item already on the list is not an
+// error, the `added` output says so and the scene author can branch on it.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+import { TEXT } from './i18n.js';
 
 const logger = createLogger({ name: 'scenes' });
 
+/** The OurGroceries list id behind the chosen device, or an error the scene logs. */
+function listIdFrom(hub, fields) {
+  const listId = hub.resolveListId(fields.list);
+  if (!listId) {
+    throw new Error(TEXT.unknownList[hub.config.language]);
+  }
+  return listId;
+}
+
 export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
+  /** "Add to the list": a button pressed, "out of milk". */
+  async add_item(hub, fields) {
+    const listId = listIdFrom(hub, fields);
+    const { result, name } = await hub.addItem(listId, fields.item);
+    logger.info(`Scene: add "${name}" to list ${listId} -> ${result}`);
+    return { added: result !== 'already', item: name };
+  },
+
+  /** "Cross off an item", found by name (case and accents do not count). */
+  async cross_off_item(hub, fields) {
+    const listId = listIdFrom(hub, fields);
+    const { found, name } = await hub.crossOff(listId, { name: fields.item });
+    logger.info(`Scene: cross off "${name}" on list ${listId} -> ${found ? 'done' : 'not found'}`);
+    return { found };
+  },
+
+  /** "Clear the crossed-off items": after the shopping trip. */
+  async clear_crossed_off(hub, fields) {
+    const listId = listIdFrom(hub, fields);
+    const deleted = await hub.clearCrossed(listId);
+    logger.info(`Scene: clear the crossed-off items of list ${listId} -> ${deleted} deleted`);
+    return { deleted };
   },
 };

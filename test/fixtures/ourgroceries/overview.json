@@ -1,0 +1,10 @@
+{
+  "command": "getOverview",
+  "shoppingLists": [
+    { "id": "Xk3pQ9rT2vLmN8wYz4aB1c", "name": "Courses", "versionId": "7Hq2Lp9sKd3mWx" },
+    { "id": "Rf6tG1hJ8kZq0pLs5nVb2m", "name": "Bricolage", "versionId": "2Bn8Vc4xZq1aSd" }
+  ],
+  "recipeLists": [
+    { "id": "Pq7wE3rT9yUi1oPa5sDf6g", "name": "Crêpes", "versionId": "9Kl3Jh7Gf2Ds1a" }
+  ]
+}

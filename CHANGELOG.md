@@ -12,44 +12,22 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- Sign-in to an OurGroceries account with its email and password; the session
+  is kept in the integration's volume, so a restart does not sign in again.
+- One device per shopping list added from the Discover tab: items to buy,
+  crossed-off items, and the list itself as a text.
+- Refresh every 5 minutes by default (2 to 30), on the integration's own
+  timer: one request reads the overview of the account, a list is read again
+  only when it changed. A list just added to Gladys gets its values at once.
+- "Shopping list" dashboard widget (Gladys 5.2.0 or later): the items to buy,
+  with buttons to add an item, cross one off and clear the crossed-off items.
+- Scene trigger "Item added to a shopping list", with the item and the list
+  name. Items added by Gladys itself do not fire it.
+- Scene actions "Add to a shopping list" (no duplicate, a crossed-off item
+  comes back), "Cross off an item" (by name, ignoring case and accents) and
+  "Clear the crossed-off items".
+- "Test the connection and refresh" button in the Configuration screen.
+- Texts, feature names and documentation in English, French, German and
+  Spanish (French by default).
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-- Integration SDK 0.15.0. The tests now run against the fake Gladys of the
-  SDK, which refuses the payloads Gladys refuses.
-- The refresh interval is one minute minimum, the fastest Gladys polls a
-  device. The plug's power is only sent when it changes, and every 30
-  minutes otherwise.
-
-### Fixed
-
-- Gladys refused the devices of the Discovery tab: the weather station and
-  the plug declared their poll frequency in seconds instead of one of the
-  values Gladys accepts, and were never polled. They now poll every minute,
-  and the readings follow the refresh interval of the configuration.
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-- The integration can write to `/data`: the image creates the directory owned
-  by the `node` user, a new Docker volume was owned by root.
-- A sub-container running the integration's own image follows it to the new
-  tag at each release, as well as in the manifest of the build summary: it kept
-  the previous tag, which may not exist on the registry. Sub-containers on a
-  third-party image (a broker, a database...) keep theirs.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/guim31/gladys-ourgroceries/commits/main

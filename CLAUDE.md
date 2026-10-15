@@ -5,9 +5,9 @@ contributors.
 
 ## What this is
 
-A Gladys Assistant **external integration**: a Node.js service (Node 22+, ESM,
-no build step) that runs in its own sandboxed Docker container and talks to
-Gladys through
+A Gladys Assistant **external integration** for the OurGroceries shared
+shopping lists: a Node.js service (Node 22+, ESM, no build step) that runs in
+its own sandboxed Docker container and talks to Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
 its only runtime dependency. It started from the official JavaScript template.
 
@@ -17,7 +17,8 @@ its only runtime dependency. It started from the official JavaScript template.
 npm install
 npm test                                  # node --test, the built-in runner
 node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test --test-name-pattern "widget"  # tests whose name matches
+node scripts/probe.mjs                    # real site, needs Internet (not in a code session)
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +32,22 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: registerHandlers(), then connect()
+src/app.js                        every SDK handler (scan, poll, device created, action, scenes, widget, config)
+src/hub.js                        the account: refresh cycle + own timer, states, item_added trigger, writes
+src/devices.js                    one device per list (buildDevice, buildStates, external ids)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    the shopping_list widget (content builder + actions)
+src/i18n.js                       every text of the code, en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+src/session.js                    session cookie + team id in /data/session.json (0600)
+src/issues.js                     repeated failures logged once, recovery once
+src/ourgroceries/client.js        HTTP client of the OurGroceries web site (sign-in, commands)
+src/ourgroceries/model.js         parsing of the answers, item name matching
+scripts/probe.mjs                 probe of the real site (made-up account, or read-only on OG_EMAIL)
+gladys-assistant-integration.json manifest: name, config_schema, actions, scenes, widget...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections everywhere)
+test/                             node --test, against the SDK's fake Gladys and test/helpers/fakeOurGroceries.js
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +77,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in four languages (English, French, German with
+  "du", Spanish with "usted"): action messages, widget texts, feature names,
+  manifest texts, and `docs/en.md`, `fr.md`, `de.md`, `es.md`, kept in sync
+  (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -197,6 +206,41 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## OurGroceries (propre à cette intégration)
+
+**API.** OurGroceries n'a pas d'API publique. Le client parle aux requêtes du site web, comme
+`ljmerza/py-our-groceries` (MIT) utilisée par Home Assistant :
+
+- connexion : `POST https://www.ourgroceries.com/sign-in` en formulaire (`emailAddress`, `password`,
+  `action=sign-in`) ; un succès pose le cookie `ourgroceries-auth` (pas de cookie = refus) ;
+- `GET /your-lists/` (avec le cookie) : la page contient `g_teamId = "…";` ;
+- chaque commande : `POST /your-lists/` en JSON `{ command, teamId, ...payload }` avec le cookie.
+  Utilisées : `getOverview` (→ `shoppingLists[].{id,name,versionId}`, recettes écartées), `getList`
+  (`listId` → `list.{versionId, items[].{id,name|value,crossedOffAt,categoryId}}`), `insertItem`
+  (`listId`, `value`, sans `categoryId` : catégorie automatique), `setItemCrossedOff` (`listId`,
+  `itemId`, `crossedOff`), `edit` (`listId`, `edits: [{ editType: 'delete', itemId }]`, la voie
+  qu'utilise Home Assistant pour supprimer) ;
+- session finie : redirection, 401/403 ou page HTML à la place du JSON → une reconnexion, une seule.
+
+**Pièges et choix.**
+
+- Le proxy des sessions de code refuse `www.ourgroceries.com` (CONNECT 403) : rien n'a été testé
+  contre le vrai service. `scripts/probe.mjs` est à lancer depuis une machine qui a le réseau.
+- `fetch` doit être appelé avec `redirect: 'manual'` : le cookie de session arrive sur la réponse 302
+  de la connexion, et une commande redirigée vers `/sign-in` signale une session finie.
+- `versionId` de l'aperçu : un seul appel par période suffit, une liste n'est relue que si sa
+  version change (même technique que le coordinateur de Home Assistant).
+- Identifiants refusés : plus de reconnexion automatique avant un changement de config ou le bouton
+  « Tester la connexion et rafraîchir » (un mauvais mot de passe réessayé bloque des comptes).
+- Le formulaire d'un bouton de widget est relu par le cœur dans le contenu **mis en cache** : la
+  liste « Cocher » peut nommer un article déjà coché, l'action répond par une phrase.
+- `item_added` : comparé à la lecture précédente (pas au démarrage), un article coché puis remis
+  compte ; les noms ajoutés par l'intégration sont mémorisés une heure pour ne pas boucler.
+- `npm run format` réécrit aussi les fixtures HTML (guillemets) : `lists-page.html` est exclu de
+  Prettier (`.prettierignore`), la page doit rester telle que le site la sert.
+- Les noms se comparent sans casse, accents ni quantité finale entre parenthèses ; NFD ne
+  décompose pas les ligatures (`œ`, `æ`, `ß`) : remplacées à la main.
 
 ## Store
 
