@@ -548,6 +548,13 @@ export function createHub({
       return config;
     },
 
+    /** Resolves once no refresh cycle is running (shutdown, tests). */
+    async whenIdle() {
+      while (cycleInFlight) {
+        await cycleInFlight.catch(() => {});
+      }
+    },
+
     get status() {
       return status;
     },

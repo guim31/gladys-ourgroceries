@@ -7,15 +7,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LIST_COURSES, PASSWORD } from './helpers/fakeOurGroceries.js';
-import { CONFIG, createWorld } from './helpers/world.js';
+import { CONFIG, createWorld, settle } from './helpers/world.js';
 
 const MINUTE = 60 * 1000;
-
-async function settle() {
-  for (let i = 0; i < 400; i += 1) {
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-}
 
 /** Every log line written during the test, at the debug level. */
 function captureLogs(t) {

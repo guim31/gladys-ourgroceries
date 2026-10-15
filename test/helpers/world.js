@@ -16,6 +16,21 @@ process.env.LOG_LEVEL ??= 'silent';
 
 export const CONFIG = { email: EMAIL, password: PASSWORD };
 
+/** The hubs of the worlds built by this test file. */
+const hubs = new Set();
+
+/**
+ * Let a fired timer run to its end: the cycle it started (sign-in, session
+ * written under /data, reads, states) is awaited, not counted in event-loop
+ * turns, which vary with the disk.
+ */
+export async function settle() {
+  for (let i = 0; i < 10; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+    await Promise.all([...hubs].map((hub) => hub.whenIdle()));
+  }
+}
+
 /**
  * @param {object} [options]
  * @param {object} [options.config] raw integration config
@@ -38,6 +53,7 @@ export async function createWorld({
   const gladys = createFakeGladys({ config });
   gladys.fake.devices = addedLists.map((listId) => deviceOf(gladys, listId));
   const app = registerHandlers(gladys, { dataDir, fetch: site.fetch, timers, now });
+  hubs.add(app.hub);
   if (connect) {
     await gladys.connect();
   }

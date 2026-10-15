@@ -8,16 +8,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HEARTBEAT_MS } from '../src/hub.js';
 import { LIST_BRICOLAGE, LIST_COURSES, PASSWORD } from './helpers/fakeOurGroceries.js';
-import { CONFIG, createWorld, deviceOf, stateOf } from './helpers/world.js';
+import { CONFIG, createWorld, deviceOf, stateOf, settle } from './helpers/world.js';
 
 const MINUTE = 60 * 1000;
-
-/** Let the promise chains of a fired timer run to their end (a renewed session adds round trips). */
-async function settle() {
-  for (let i = 0; i < 400; i += 1) {
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-}
 
 function useClock(t) {
   t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: Date.parse('2026-10-15T08:00:00Z') });
